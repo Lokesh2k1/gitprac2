@@ -1,1 +1,223 @@
-hi
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Customer Support Agent - Capstone</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Capstone Assessment</p>
+        <h1>E-commerce AI Customer Support Agent</h1>
+        <p class="summary">A demo interface showing how an AI support agent automates order tracking, returns, refunds, and human escalation to reduce wait times and improve satisfaction.</p>
+      </div>
+    </header>
+
+    <div class="layout">
+      <section class="panel panel-info">
+        <h2>Business Problem</h2>
+        <p>Support teams face repetitive queries during peak traffic, resulting in long wait times, higher costs, and lower customer satisfaction.</p>
+
+        <h3>Objectives</h3>
+        <ul>
+          <li>Automate high-frequency customer support queries</li>
+          <li>Reduce response times during peak loads</li>
+          <li>Improve first-contact resolution</li>
+          <li>Ensure smooth escalation to human agents</li>
+        </ul>
+
+        <h3>Solution Overview</h3>
+        <p>This prototype simulates an AI agent using retrieval-augmented generation to answer FAQs, fetch order details, and initiate basic workflows like returns.</p>
+
+        <h3>Workflow</h3>
+        <ol>
+          <li>Customer submits a query via chat.</li>
+          <li>Agent identifies intent and key entities.</li>
+          <li>Relevant knowledge or order data is retrieved.</li>
+          <li>Response is generated or action is triggered.</li>
+          <li>Complex issues are escalated with context.</li>
+        </ol>
+
+        <h3>Sample Q&A</h3>
+        <div class="card">
+          <p><strong>Q:</strong> Where is my order? It was supposed to arrive yesterday.</p>
+          <p><strong>A:</strong> Your order is currently delayed due to logistics issues and is expected to arrive tomorrow. Would you like delivery updates?</p>
+        </div>
+
+        <div class="card">
+          <p><strong>Q:</strong> I want to return the item I received.</p>
+          <p><strong>A:</strong> I can help you initiate a return. Please share your order ID to proceed.</p>
+        </div>
+      </section>
+
+      <section class="panel panel-chat">
+        <div class="chat-header">
+          <div>
+            <h2>AI Support Chat</h2>
+            <p>Type a query to see the agent in action.</p>
+          </div>
+          <div class="chip">Peak-ready support agent</div>
+        </div>
+
+        <div id="chatWindow" class="chat-window"></div>
+
+        <form id="chatForm" class="chat-input">
+          <input id="userInput" type="text" placeholder="Ask about an order, return, refund, or delivery..." autocomplete="off" />
+          <button type="submit">Send</button>
+        </form>
+
+        <div class="quick-actions">
+          <button type="button" onclick="sendSample('Where is my order? It was supposed to arrive yesterday.')">Where is my order?</button>
+          <button type="button" onclick="sendSample('I want to return the item I received.')">Initiate a return</button>
+          <button type="button" onclick="sendSample('How do I get a refund?')">Get a refund</button>
+          <button type="button" onclick="sendSample('I need a human agent.')">Escalate</button>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const orders = {
+      ORD1001: {
+        status: 'Delayed',
+        eta: 'Tomorrow',
+        lastUpdate: 'Logistics delay',
+        deliveryAddress: '123 Maple Street',
+        canReturn: true,
+        refundAmount: '$0.00'
+      },
+      ORD1002: {
+        status: 'Delivered',
+        eta: 'Today',
+        lastUpdate: 'Delivered at front desk',
+        deliveryAddress: '456 Oak Avenue',
+        canReturn: true,
+        refundAmount: '$0.00'
+      },
+      ORD1003: {
+        status: 'Refunded',
+        eta: 'N/A',
+        lastUpdate: 'Refund completed',
+        deliveryAddress: '789 Pine Road',
+        canReturn: false,
+        refundAmount: '$25.00'
+      }
+    };
+
+    const knowledgeBase = [
+      {
+        intent: 'delivery',
+        answer: 'Your order is in transit and is being monitored. If it is delayed, I can send you the latest delivery updates.',
+      },
+      {
+        intent: 'return',
+        answer: 'I can help you start a return. Please provide your order ID so I can check the return policy and initiate the process.',
+      },
+      {
+        intent: 'refund',
+        answer: 'Refunds are processed once the returned item is received. Share your order ID and I will confirm the refund status.',
+      },
+      {
+        intent: 'escalation',
+        answer: 'I am escalating this issue to a human agent. They will contact you with additional support soon.',
+      }
+    ];
+
+    const chatWindow = document.getElementById('chatWindow');
+    const chatForm = document.getElementById('chatForm');
+    const userInput = document.getElementById('userInput');
+
+    function appendMessage(sender, text, isBot = false) {
+      const wrapper = document.createElement('div');
+      wrapper.className = isBot ? 'message bot' : 'message user';
+      wrapper.innerHTML = `
+        <span class="message-label">${sender}</span>
+        <div class="message-content">${text}</div>
+      `;
+      chatWindow.appendChild(wrapper);
+      chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+
+    function findOrderId(text) {
+      const match = text.match(/\bORD\d{4,}\b/i);
+      return match ? match[0].toUpperCase() : null;
+    }
+
+    function getOrderResponse(orderId) {
+      const order = orders[orderId];
+      if (!order) {
+        return `I could not find an order with ID ${orderId}. Please check the order ID and try again. Example IDs: ORD1001, ORD1002, ORD1003.`;
+      }
+      return `Order ${orderId} status: ${order.status}. Last update: ${order.lastUpdate}. Estimated delivery: ${order.eta}.`; 
+    }
+
+    function processQuery(query) {
+      const normalized = query.trim().toLowerCase();
+      const orderId = findOrderId(query);
+
+      if (/human|agent|escalat|support/.test(normalized)) {
+        return knowledgeBase.find(item => item.intent === 'escalation').answer;
+      }
+
+      if (/return|exchange/.test(normalized)) {
+        if (orderId) {
+          const order = orders[orderId];
+          if (!order) {
+            return `I could not find an order with ID ${orderId}. Please confirm your order ID to start the return.`;
+          }
+          return `I have initiated the return workflow for order ${orderId}. Once the item is received, we will process your refund.`;
+        }
+        return knowledgeBase.find(item => item.intent === 'return').answer;
+      }
+
+      if (/refund/.test(normalized)) {
+        if (orderId) {
+          const order = orders[orderId];
+          if (!order) {
+            return `I could not find an order with ID ${orderId}. Please share the correct order ID to check refund status.`;
+          }
+          return `Order ${orderId} refund status: ${order.status === 'Refunded' ? 'Refund completed' : 'Refund will be processed after return confirmation.'}`;
+        }
+        return knowledgeBase.find(item => item.intent === 'refund').answer;
+      }
+
+      if (/where|status|track|delivery|arriv/.test(normalized)) {
+        if (orderId) {
+          return getOrderResponse(orderId);
+        }
+        return knowledgeBase.find(item => item.intent === 'delivery').answer + ' If you provide your order ID, I can give you the exact status.';
+      }
+
+      if (/thanks|thank you/.test(normalized)) {
+        return 'You are welcome! If you have any other order or support questions, I’m here to help.';
+      }
+
+      return 'I’m here to help with orders, returns, refunds, and delivery tracking. Please tell me your order ID or describe your issue.';
+    }
+
+    function sendQuery(text) {
+      if (!text.trim()) return;
+      appendMessage('You', text, false);
+      const answer = processQuery(text);
+      setTimeout(() => appendMessage('Agent', answer, true), 300);
+    }
+
+    function sendSample(sample) {
+      userInput.value = sample;
+      sendQuery(sample);
+    }
+
+    chatForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const text = userInput.value;
+      userInput.value = '';
+      sendQuery(text);
+    });
+
+    appendMessage('Agent', 'Hello! I’m your AI support agent. Ask me about order status, returns, refunds, or delivery. For example, enter ORD1001 with your query.', true);
+  </script>
+</body>
+</html>
